@@ -1,5 +1,9 @@
 from src.common.models import BuyerCandidate
-from src.exporter.backend_payload import export_backend_payload, export_backend_payloads
+from src.exporter.backend_payload import (
+    build_ingestion_request,
+    export_backend_payload,
+    export_backend_payloads,
+)
 from src.pipeline.normalizer import normalize_candidates
 from src.pipeline.scorer import score_candidate
 
@@ -29,59 +33,60 @@ def test_export_backend_payload_keeps_discovery_contract_focused() -> None:
 
     payload = export_backend_payload(
         scored,
-        tenant_id="tenant-001",
-        warehouse_id="warehouse-guntur-01",
-        crawl_run_ref="crawl-run-2024-07-01T10:00:00Z",
+        crawl_run_ref="2024-07-01T10:00:00Z",
+        state_by_town={"guntur": "Andhra Pradesh"},
+        discovery_source="buyer-discovery-worker",
     )
 
-    assert payload["schema_version"] == 1
-    assert payload["tenant_id"] == "tenant-001"
-    assert payload["warehouse_id"] == "warehouse-guntur-01"
-    assert payload["crawl_run_ref"] == "crawl-run-2024-07-01T10:00:00Z"
-    assert payload["candidate_ref"] == "buyer:guntur:sri-balaji-commission-agent:example-com"
-    assert payload["confidence_score"] == scored.confidence_score
-    assert payload["score_reasons"] == list(scored.score_reasons)
-    assert payload["review_state"] == "auto_approved"
-    assert payload["dedupe_fields"] == [
-        "domain:example.com",
-        "phone:+919988777665",
-        "email:sales@example.com",
-    ]
-    assert payload["business"] == {
-        "name": "Sri Balaji Commission Agent",
-        "town": "Guntur",
-        "website": "https://example.com/",
-        "domain": "example.com",
-    }
-    assert payload["contact"] == {
-        "phones": ["+919988777665"],
-        "emails": ["sales@example.com"],
-        "other_hints": [],
-    }
+    assert payload["buyerName"] == "Sri Balaji Commission Agent"
+    assert payload["businessName"] == "Sri Balaji Commission Agent"
+    assert payload["primaryPhone"] == "+919988777665"
+    assert payload["primaryEmail"] == "sales@example.com"
+    assert payload["city"] == "Guntur"
+    assert payload["stateProvince"] == "Andhra Pradesh"
+    assert payload["discoverySource"] == "buyer-discovery-worker"
+    assert payload["discoveryNotes"] == (
+        "crawl_run_ref=2024-07-01T10:00:00Z; "
+        "candidate_ref=buyer:guntur:sri-balaji-commission-agent:example-com; "
+        "confidence_score=1.00; "
+        "review_state=auto_approved; "
+        "sources=website_enrichment,business_directory"
+    )
     assert payload["evidence"] == [
         {
-            "source_key": "website_enrichment",
-            "source_url": "https://example.com/",
-            "website": "https://example.com/",
-            "contact_hints": ["sales@example.com"],
-            "source_confidence_class": "first_party_website",
-            "source_confidence_level": 3,
+            "evidenceType": "WEBSITE",
+            "sourceLabel": "website_enrichment",
+            "details": (
+                "confidence_class=first_party_website; "
+                "website=https://example.com/; "
+                "contact_hints=sales@example.com"
+            ),
+            "evidenceUrl": "https://example.com/",
+            "capturedAt": "2024-07-01T10:00:00Z",
         },
         {
-            "source_key": "business_directory",
-            "source_url": "https://directory.example/listing/sri-balaji",
-            "website": "https://example.com/contact",
-            "contact_hints": ["+919988777665"],
-            "source_confidence_class": "third_party_listing",
-            "source_confidence_level": 2,
+            "evidenceType": "DIRECTORY_LISTING",
+            "sourceLabel": "business_directory",
+            "details": (
+                "confidence_class=third_party_listing; "
+                "website=https://example.com/contact; "
+                "contact_hints=+919988777665"
+            ),
+            "evidenceUrl": "https://directory.example/listing/sri-balaji",
+            "capturedAt": "2024-07-01T10:00:00Z",
         },
     ]
-    assert "depositor" not in payload
-    assert "lot" not in payload
 
     assert export_backend_payloads(
         [scored],
-        tenant_id="tenant-001",
-        warehouse_id="warehouse-guntur-01",
-        crawl_run_ref="crawl-run-2024-07-01T10:00:00Z",
+        crawl_run_ref="2024-07-01T10:00:00Z",
+        state_by_town={"guntur": "Andhra Pradesh"},
+        discovery_source="buyer-discovery-worker",
     ) == [payload]
+
+    assert build_ingestion_request(
+        [scored],
+        crawl_run_ref="2024-07-01T10:00:00Z",
+        state_by_town={"guntur": "Andhra Pradesh"},
+        discovery_source="buyer-discovery-worker",
+    ) == {"candidates": [payload]}

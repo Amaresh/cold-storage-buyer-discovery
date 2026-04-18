@@ -1,53 +1,89 @@
-"""Backend export contract for scored buyer discovery candidates."""
+"""Map scored worker candidates into the live backend ingestion contract."""
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 
 from src.common.models import ScoredBuyerCandidate
 
-SCHEMA_VERSION = 1
+_EVIDENCE_TYPE_BY_CLASS = {
+    "discovery_seed": "SEARCH_SEED",
+    "third_party_listing": "DIRECTORY_LISTING",
+    "first_party_website": "WEBSITE",
+    "unknown": "OTHER",
+}
+
+
+def _truncate(value: str, limit: int) -> str:
+    normalized = " ".join(value.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 3].rstrip() + "..."
+
+
+def _candidate_notes(candidate: ScoredBuyerCandidate, crawl_run_ref: str) -> str:
+    normalized = candidate.candidate
+    parts = [
+        f"crawl_run_ref={crawl_run_ref}",
+        f"candidate_ref={normalized.candidate_ref}",
+        f"confidence_score={candidate.confidence_score:.2f}",
+        f"review_state={candidate.review_state}",
+        f"sources={','.join(normalized.source_keys)}",
+    ]
+    return _truncate("; ".join(parts), 1000)
+
+
+def _evidence_details(
+    *,
+    website: str,
+    contact_hints: tuple[str, ...],
+    source_confidence_class: str,
+) -> str:
+    parts = [f"confidence_class={source_confidence_class}"]
+    if website:
+        parts.append(f"website={website}")
+    if contact_hints:
+        parts.append(f"contact_hints={','.join(contact_hints)}")
+    return _truncate("; ".join(parts), 1000)
 
 
 def export_backend_payload(
     candidate: ScoredBuyerCandidate,
     *,
-    tenant_id: str,
-    warehouse_id: str,
     crawl_run_ref: str,
+    state_by_town: Mapping[str, str] | None = None,
+    discovery_source: str = "buyer-discovery-worker",
 ) -> dict[str, object]:
-    """Serialize a scored discovery candidate for later backend ingestion."""
+    """Serialize one scored discovery candidate for backend ingestion."""
 
     normalized = candidate.candidate
+    state_province = ""
+    if state_by_town is not None:
+        state_province = state_by_town.get(normalized.town.casefold(), "")
+
     return {
-        "schema_version": SCHEMA_VERSION,
-        "tenant_id": tenant_id,
-        "warehouse_id": warehouse_id,
-        "crawl_run_ref": crawl_run_ref,
-        "candidate_ref": normalized.candidate_ref,
-        "confidence_score": candidate.confidence_score,
-        "score_reasons": list(candidate.score_reasons),
-        "review_state": candidate.review_state,
-        "dedupe_fields": list(normalized.dedupe_fields),
-        "business": {
-            "name": normalized.business_name,
-            "town": normalized.town,
-            "website": normalized.website,
-            "domain": normalized.domain,
-        },
-        "contact": {
-            "phones": list(normalized.phones),
-            "emails": list(normalized.emails),
-            "other_hints": list(normalized.other_contact_hints),
-        },
+        "buyerName": normalized.business_name,
+        "businessName": normalized.business_name,
+        "primaryPhone": normalized.phones[0] if normalized.phones else "",
+        "primaryEmail": normalized.emails[0] if normalized.emails else "",
+        "city": normalized.town,
+        "stateProvince": state_province,
+        "discoverySource": discovery_source,
+        "discoveryNotes": _candidate_notes(candidate, crawl_run_ref),
         "evidence": [
             {
-                "source_key": evidence.source_key,
-                "source_url": evidence.source_url,
-                "website": evidence.website,
-                "contact_hints": list(evidence.contact_hints),
-                "source_confidence_class": evidence.source_confidence_class,
-                "source_confidence_level": evidence.source_confidence_level,
+                "evidenceType": _EVIDENCE_TYPE_BY_CLASS.get(
+                    evidence.source_confidence_class,
+                    "OTHER",
+                ),
+                "sourceLabel": evidence.source_key,
+                "details": _evidence_details(
+                    website=evidence.website,
+                    contact_hints=evidence.contact_hints,
+                    source_confidence_class=evidence.source_confidence_class,
+                ),
+                "evidenceUrl": evidence.source_url,
+                "capturedAt": crawl_run_ref,
             }
             for evidence in normalized.evidence
         ],
@@ -57,16 +93,33 @@ def export_backend_payload(
 def export_backend_payloads(
     candidates: Iterable[ScoredBuyerCandidate],
     *,
-    tenant_id: str,
-    warehouse_id: str,
     crawl_run_ref: str,
+    state_by_town: Mapping[str, str] | None = None,
+    discovery_source: str = "buyer-discovery-worker",
 ) -> list[dict[str, object]]:
     return [
         export_backend_payload(
             candidate,
-            tenant_id=tenant_id,
-            warehouse_id=warehouse_id,
             crawl_run_ref=crawl_run_ref,
+            state_by_town=state_by_town,
+            discovery_source=discovery_source,
         )
         for candidate in candidates
     ]
+
+
+def build_ingestion_request(
+    candidates: Iterable[ScoredBuyerCandidate],
+    *,
+    crawl_run_ref: str,
+    state_by_town: Mapping[str, str] | None = None,
+    discovery_source: str = "buyer-discovery-worker",
+) -> dict[str, object]:
+    return {
+        "candidates": export_backend_payloads(
+            candidates,
+            crawl_run_ref=crawl_run_ref,
+            state_by_town=state_by_town,
+            discovery_source=discovery_source,
+        )
+    }

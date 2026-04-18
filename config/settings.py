@@ -18,6 +18,19 @@ def _split_env_list(name: str, default: Sequence[str]) -> tuple[str, ...]:
     return tuple(item.strip() for item in raw_value.split(",") if item.strip())
 
 
+def _env_flag(name: str, default: bool) -> bool:
+    raw_value = os.getenv(name, "")
+    if not raw_value.strip():
+        return default
+
+    normalized = raw_value.strip().casefold()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"Unsupported boolean value for {name}: {raw_value!r}")
+
+
 def _default_sources() -> tuple[SourceConfig, ...]:
     return (
         SourceConfig(
@@ -55,10 +68,50 @@ class Settings:
         )
     )
     sources: tuple[SourceConfig, ...] = field(default_factory=_default_sources)
+    backend_base_url: str = field(
+        default_factory=lambda: (
+            os.getenv("BUYER_DISCOVERY_BACKEND_BASE_URL", "http://127.0.0.1:9090").strip().rstrip("/")
+            or "http://127.0.0.1:9090"
+        )
+    )
+    internal_api_header: str = field(
+        default_factory=lambda: (
+            os.getenv("BUYER_DISCOVERY_INTERNAL_API_HEADER", "X-API-Key").strip()
+            or "X-API-Key"
+        )
+    )
+    internal_api_key: str = field(
+        default_factory=lambda: os.getenv("BUYER_DISCOVERY_INTERNAL_API_KEY", "").strip()
+    )
+    tenant_id: str = field(
+        default_factory=lambda: (
+            os.getenv("BUYER_DISCOVERY_TENANT_ID", "demo-tenant").strip()
+            or "demo-tenant"
+        )
+    )
+    warehouse_id: str = field(
+        default_factory=lambda: (
+            os.getenv("BUYER_DISCOVERY_WAREHOUSE_ID", "guntur-hub").strip()
+            or "guntur-hub"
+        )
+    )
+    discovery_source: str = field(
+        default_factory=lambda: (
+            os.getenv("BUYER_DISCOVERY_DISCOVERY_SOURCE", "buyer-discovery-worker").strip()
+            or "buyer-discovery-worker"
+        )
+    )
+    use_sample_snapshots: bool = field(
+        default_factory=lambda: _env_flag("BUYER_DISCOVERY_USE_SAMPLE_SNAPSHOTS", True)
+    )
 
     @property
     def towns_path(self) -> Path:
         return self.base_dir / "config" / "towns.json"
+
+    @property
+    def sample_snapshots_dir(self) -> Path:
+        return self.base_dir / "config" / "sample_snapshots"
 
     def load_towns(self) -> tuple[TownSeed, ...]:
         payload = json.loads(self.towns_path.read_text(encoding="utf-8"))
@@ -85,6 +138,13 @@ class Settings:
                 ),
             )
         )
+
+    def town_state_by_name(self) -> dict[str, str]:
+        return {
+            town.name.casefold(): town.state
+            for town in self.load_towns()
+            if town.state
+        }
 
 
 settings = Settings()
