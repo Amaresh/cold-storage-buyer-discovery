@@ -1,0 +1,29 @@
+name: Trigger crawler deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch ops deploy
+        env:
+          GH_TOKEN: ${{ secrets.OPS_REPO_DISPATCH_TOKEN }}
+          PROJECT: cold-storage-buyer-discovery
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "OPS_REPO_DISPATCH_TOKEN is not configured; skipping dispatch."
+            exit 0
+          fi
+
+          gh api repos/Amaresh/cold-storage-ops/dispatches \
+            --method POST \
+            -f event_type=deploy \
+            -F client_payload[project]="$PROJECT" \
+            -F client_payload[ref]="${GITHUB_SHA}" \
+            -F client_payload[repo]="${GITHUB_REPOSITORY}"
+

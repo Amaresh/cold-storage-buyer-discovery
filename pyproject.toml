@@ -1,0 +1,9 @@
+[project]
+name = "cold-storage-buyer-discovery"
+version = "0.1.0"
+description = "Buyer discovery worker scaffold"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

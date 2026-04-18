@@ -1,0 +1,19 @@
+{
+  "towns": [
+    {
+      "name": "Guntur",
+      "state": "Andhra Pradesh",
+      "priority": 1
+    },
+    {
+      "name": "Khammam",
+      "state": "Telangana",
+      "priority": 2
+    },
+    {
+      "name": "Warangal",
+      "state": "Telangana",
+      "priority": 3
+    }
+  ]
+}
