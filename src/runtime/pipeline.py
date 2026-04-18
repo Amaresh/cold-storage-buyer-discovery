@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from config.settings import Settings
 from src.common.models import BuyerCandidate, CrawlJob, ScoredBuyerCandidate, TownSeed
@@ -130,7 +130,7 @@ class SampleDiscoveryPipeline:
         all_candidates = _unique_candidates([*unique_raw_candidates, *enriched_candidates])
         normalized_candidates = normalize_candidates(all_candidates)
         scored_candidates = tuple(score_candidates(normalized_candidates))
-        crawl_run_ref = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        crawl_run_ref = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         ingestion_request = build_ingestion_request(
             scored_candidates,
             crawl_run_ref=crawl_run_ref,
