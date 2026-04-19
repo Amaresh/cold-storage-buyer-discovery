@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from config.settings import Settings
 
 
@@ -48,3 +50,13 @@ def test_market_intel_scenario_can_be_selected_from_env(monkeypatch) -> None:
     settings = Settings()
 
     assert settings.market_intel_scenario == "low-rate"
+
+
+def test_invalid_integer_env_raises_clear_value_error(monkeypatch) -> None:
+    monkeypatch.setenv("BUYER_DISCOVERY_MAX_RADIUS_KM", "invalid")
+
+    with pytest.raises(
+        ValueError,
+        match="Environment variable BUYER_DISCOVERY_MAX_RADIUS_KM must be a valid integer",
+    ):
+        Settings()

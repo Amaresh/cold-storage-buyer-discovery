@@ -35,7 +35,12 @@ def _env_int(name: str, default: int) -> int:
     raw_value = os.getenv(name, "")
     if not raw_value.strip():
         return default
-    return int(raw_value.strip())
+    try:
+        return int(raw_value.strip())
+    except ValueError as exc:
+        raise ValueError(
+            f"Environment variable {name} must be a valid integer, got {raw_value!r}"
+        ) from exc
 
 
 def _default_sources() -> tuple[SourceConfig, ...]:
