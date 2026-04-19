@@ -50,5 +50,5 @@ def test_score_candidate_leaves_seed_only_candidate_for_review() -> None:
     scored = score_candidate(candidate)
 
     assert scored.review_state == "needs_review"
-    assert scored.confidence_score == 0.2
+    assert scored.confidence_score == 0.4
     assert scored.auto_approved is False

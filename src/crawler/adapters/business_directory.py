@@ -6,6 +6,7 @@ from collections.abc import Sequence
 import re
 
 from src.common.models import BuyerCandidate
+from src.common.sanitization import is_extractable_business_name
 from src.crawler.adapters._utils import (
     collapse_whitespace,
     detect_town,
@@ -57,7 +58,12 @@ class BusinessDirectoryAdapter:
                 resolve_href(website_match.group(1), directory_page_url) if website_match else ""
             )
             town = detect_town(business_name, location, contact_text, town_hints=self._town_hints)
-            if not business_name or not source_url or not town:
+            if (
+                not business_name
+                or not source_url
+                or not town
+                or not is_extractable_business_name(business_name)
+            ):
                 continue
 
             contact_hints = extract_contact_hints(location, contact_text)

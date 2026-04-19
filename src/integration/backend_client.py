@@ -19,7 +19,10 @@ class BackendIngestionClient:
         api_key: str,
         timeout_seconds: int = 30,
     ) -> None:
-        self._endpoint = f"{base_url.rstrip('/')}/api/v1/internal/trading/buyer-leads/ingestion"
+        base = base_url.rstrip("/")
+        self._buyer_lead_endpoint = f"{base}/api/v1/internal/trading/buyer-leads/ingestion"
+        self._market_snapshot_endpoint = f"{base}/api/v1/internal/trading/market-intelligence/price-snapshots"
+        self._market_chatter_endpoint = f"{base}/api/v1/internal/trading/market-intelligence/chatter"
         self._tenant_id = tenant_id
         self._warehouse_id = warehouse_id
         self._api_header = api_header
@@ -27,15 +30,46 @@ class BackendIngestionClient:
         self._timeout_seconds = timeout_seconds
 
     def ingest(self, payload: dict[str, object]) -> dict[str, object]:
-        candidates = payload.get("candidates")
-        if not isinstance(candidates, list) or not candidates:
-            return {"processedCount": 0, "candidates": []}
+        return self._post(
+            self._buyer_lead_endpoint,
+            payload,
+            item_key="candidates",
+            empty_response={"processedCount": 0, "candidates": []},
+        )
+
+    def ingest_market_price_snapshots(self, payload: dict[str, object]) -> dict[str, object]:
+        return self._post(
+            self._market_snapshot_endpoint,
+            payload,
+            item_key="snapshots",
+            empty_response={"processedCount": 0},
+        )
+
+    def ingest_market_chatter(self, payload: dict[str, object]) -> dict[str, object]:
+        return self._post(
+            self._market_chatter_endpoint,
+            payload,
+            item_key="items",
+            empty_response={"processedCount": 0},
+        )
+
+    def _post(
+        self,
+        endpoint: str,
+        payload: dict[str, object],
+        *,
+        item_key: str,
+        empty_response: dict[str, object],
+    ) -> dict[str, object]:
+        items = payload.get(item_key)
+        if not isinstance(items, list) or not items:
+            return dict(empty_response)
         if not self._api_key:
             raise ValueError("BUYER_DISCOVERY_INTERNAL_API_KEY must be configured before ingesting.")
 
         data = json.dumps(payload).encode()
         req = request.Request(
-            self._endpoint,
+            endpoint,
             data=data,
             headers={
                 "Content-Type": "application/json",
@@ -60,14 +94,13 @@ class BackendIngestionClient:
             ) from exc
 
         if not body:
-            return {"processedCount": 0, "candidates": []}
+            return dict(empty_response)
 
         try:
             return json.loads(body)
         except json.JSONDecodeError:
-            return {
-                "processedCount": len(candidates),
-                "candidates": [],
-                "warning": "non_json_response",
-                "rawBody": body,
-            }
+            response = dict(empty_response)
+            response["processedCount"] = len(items)
+            response["warning"] = "non_json_response"
+            response["rawBody"] = body
+            return response

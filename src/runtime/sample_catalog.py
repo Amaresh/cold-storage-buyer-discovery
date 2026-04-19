@@ -30,6 +30,8 @@ class HtmlSnapshot:
 class SampleSnapshotCatalog:
     """Loads the curated HTML snapshots used by the live sample worker path."""
 
+    mode_name = "selected_sample_snapshots"
+
     def __init__(self, snapshots_dir: Path) -> None:
         self._snapshots_dir = snapshots_dir
 

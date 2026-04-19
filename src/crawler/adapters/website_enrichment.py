@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import re
+from urllib.parse import urlsplit
 
+from src.common.sanitization import select_best_business_name
 from src.common.models import BuyerCandidate
 from src.crawler.adapters._utils import (
     collapse_whitespace,
@@ -17,6 +19,10 @@ from src.crawler.adapters._utils import (
 _H1_RE = re.compile(r"<h1[^>]*>(.*?)</h1>", re.DOTALL)
 _TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.DOTALL)
 _BODY_RE = re.compile(r"<body[^>]*>(.*?)</body>", re.DOTALL)
+_META_SITE_NAME_RE = re.compile(
+    r'<meta[^>]+(?:property|name)=["\']og:site_name["\'][^>]+content=["\'](.*?)["\']',
+    re.DOTALL | re.IGNORECASE,
+)
 
 
 class WebsiteEnrichmentAdapter:
@@ -37,7 +43,13 @@ class WebsiteEnrichmentAdapter:
         body = strip_tags(_BODY_RE.search(html).group(1)) if _BODY_RE.search(html) else strip_tags(html)
         title = strip_tags(_TITLE_RE.search(html).group(1)) if _TITLE_RE.search(html) else ""
         heading = strip_tags(_H1_RE.search(html).group(1)) if _H1_RE.search(html) else ""
-        business_name = heading or title
+        parsed_source = urlsplit(source_url)
+        site_name = (
+            strip_tags(_META_SITE_NAME_RE.search(html).group(1))
+            if parsed_source.path in {"", "/"} and _META_SITE_NAME_RE.search(html)
+            else ""
+        )
+        business_name = select_best_business_name(heading, title, site_name)
         town = detect_town(business_name, title, body, town_hints=self._town_hints)
         contact_hints = extract_contact_hints(title, body)
         if not business_name or not town or not contact_hints:

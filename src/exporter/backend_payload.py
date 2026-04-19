@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 
-from src.common.models import ScoredBuyerCandidate
+from src.common.models import ScoredBuyerCandidate, slugify
 
 _EVIDENCE_TYPE_BY_CLASS = {
     "discovery_seed": "SEARCH_SEED",
@@ -31,6 +31,26 @@ def _candidate_notes(candidate: ScoredBuyerCandidate, crawl_run_ref: str) -> str
         f"sources={','.join(normalized.source_keys)}",
     ]
     return _truncate("; ".join(parts), 1000)
+
+
+def _external_match_key(candidate: ScoredBuyerCandidate, discovery_source: str) -> str:
+    normalized = candidate.candidate
+    if normalized.domain:
+        return "|".join(
+            (
+                discovery_source.casefold(),
+                slugify(normalized.town_key),
+                slugify(normalized.business_name_key),
+                f"domain:{normalized.domain}",
+            )
+        )
+    return "|".join(
+        (
+            discovery_source.casefold(),
+            slugify(normalized.town_key),
+            slugify(normalized.business_name_key),
+        )
+    )
 
 
 def _evidence_details(
@@ -60,10 +80,12 @@ def export_backend_payload(
     state_province = ""
     if state_by_town is not None:
         state_province = state_by_town.get(normalized.town.casefold(), "")
+    buyer_name = _truncate(normalized.business_name, 120)
 
     return {
-        "buyerName": normalized.business_name,
-        "businessName": normalized.business_name,
+        "externalMatchKey": _external_match_key(candidate, discovery_source),
+        "buyerName": buyer_name,
+        "businessName": buyer_name,
         "primaryPhone": normalized.phones[0] if normalized.phones else "",
         "primaryEmail": normalized.emails[0] if normalized.emails else "",
         "city": normalized.town,

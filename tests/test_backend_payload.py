@@ -40,6 +40,9 @@ def test_export_backend_payload_keeps_discovery_contract_focused() -> None:
 
     assert payload["buyerName"] == "Sri Balaji Commission Agent"
     assert payload["businessName"] == "Sri Balaji Commission Agent"
+    assert payload["externalMatchKey"] == (
+        "buyer-discovery-worker|guntur|sri-balaji-commission-agent|domain:example.com"
+    )
     assert payload["primaryPhone"] == "+919988777665"
     assert payload["primaryEmail"] == "sales@example.com"
     assert payload["city"] == "Guntur"
@@ -90,3 +93,37 @@ def test_export_backend_payload_keeps_discovery_contract_focused() -> None:
         state_by_town={"guntur": "Andhra Pradesh"},
         discovery_source="buyer-discovery-worker",
     ) == {"candidates": [payload]}
+
+
+def test_export_backend_payload_truncates_buyer_name_to_backend_limit() -> None:
+    normalized = normalize_candidates(
+        [
+            BuyerCandidate(
+                business_name=(
+                    "Very Long Buyer Lead Name " * 8
+                ).strip(),
+                source_url="https://example.com/very-long-buyer",
+                town="Guntur",
+                website="https://example.com",
+                contact_hints=("9876543210",),
+                source_key="website_enrichment",
+            )
+        ]
+    )[0]
+    scored = score_candidate(normalized)
+
+    payload = export_backend_payload(
+        scored,
+        crawl_run_ref="2024-07-01T10:00:00Z",
+        state_by_town={"guntur": "Andhra Pradesh"},
+        discovery_source="buyer-discovery-worker",
+    )
+
+    assert len(payload["buyerName"]) == 120
+    assert len(payload["businessName"]) == 120
+    assert payload["externalMatchKey"] == (
+        "buyer-discovery-worker|guntur|very-long-buyer-lead-name-very-long-buyer-lead-name-"
+        "very-long-buyer-lead-name-very-long-buyer-lead-name-very-long-buyer-lead-name-very-"
+        "long-buyer-lead-name-very-long-buyer-lead-name-very-long-buyer-lead-name|domain:example.com"
+    )
+    assert payload["buyerName"].endswith("...")

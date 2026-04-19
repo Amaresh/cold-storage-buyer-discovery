@@ -13,13 +13,16 @@ from src.crawler.adapters.google_search_seed import GoogleSearchSeedAdapter
 from src.crawler.adapters.website_enrichment import WebsiteEnrichmentAdapter
 from src.crawler.source_registry import SourceRegistry
 from src.exporter.backend_payload import build_ingestion_request
-from src.pipeline.normalizer import normalize_candidates
+from src.pipeline.normalizer import is_shared_host_domain, normalize_candidates, normalize_domain
+from src.pipeline.sanitizer import sanitize_scored_candidates
 from src.pipeline.scorer import score_candidates
+from src.runtime.live_catalog import LiveSnapshotCatalog
 from src.runtime.sample_catalog import HtmlSnapshot, SampleSnapshotCatalog
 
 
 @dataclass(frozen=True, slots=True)
 class DiscoveryRunResult:
+    mode: str
     crawl_run_ref: str
     scheduled_jobs: int
     processed_jobs: int
@@ -27,13 +30,15 @@ class DiscoveryRunResult:
     raw_candidate_count: int
     enriched_candidate_count: int
     normalized_candidate_count: int
+    sanitized_candidate_count: int
     auto_approved_candidate_count: int
     ingestion_request: dict[str, object]
     scored_candidates: tuple[ScoredBuyerCandidate, ...]
+    eligible_candidates: tuple[ScoredBuyerCandidate, ...]
 
     def to_dict(self) -> dict[str, object]:
         return {
-            "mode": "selected_sample_snapshots",
+            "mode": self.mode,
             "crawlRunRef": self.crawl_run_ref,
             "scheduledJobs": self.scheduled_jobs,
             "processedJobs": self.processed_jobs,
@@ -41,6 +46,7 @@ class DiscoveryRunResult:
             "rawCandidateCount": self.raw_candidate_count,
             "enrichedCandidateCount": self.enriched_candidate_count,
             "normalizedCandidateCount": self.normalized_candidate_count,
+            "sanitizedCandidateCount": self.sanitized_candidate_count,
             "autoApprovedCandidateCount": self.auto_approved_candidate_count,
             "candidates": [
                 {
@@ -51,7 +57,7 @@ class DiscoveryRunResult:
                     "reviewState": candidate.review_state,
                     "sources": list(candidate.candidate.source_keys),
                 }
-                for candidate in self.scored_candidates
+                for candidate in self.eligible_candidates
             ],
         }
 
@@ -80,14 +86,25 @@ def _unique_candidates(candidates: Sequence[BuyerCandidate]) -> list[BuyerCandid
 
 
 class SampleDiscoveryPipeline:
-    """Runs the deterministic sample discovery path used for live validation."""
+    """Runs either the sample-backed path or the live web-fetch path."""
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         towns = settings.load_towns()
         town_hints = tuple(town.name for town in towns)
         self._registry = SourceRegistry(settings.sources)
-        self._catalog = SampleSnapshotCatalog(settings.sample_snapshots_dir)
+        self._catalog = (
+            SampleSnapshotCatalog(settings.sample_snapshots_dir)
+            if settings.use_sample_snapshots
+                else LiveSnapshotCatalog(
+                    google_search_url_template=settings.google_search_url_template,
+                    search_fallback_url_template=settings.search_fallback_url_template,
+                    search_fallback_url_templates=settings.search_fallback_url_templates,
+                    business_directory_url_template=settings.business_directory_url_template,
+                    user_agent=settings.http_user_agent,
+                    timeout_seconds=settings.fetch_timeout_seconds,
+                )
+        )
         self._google_adapter = GoogleSearchSeedAdapter(town_hints=town_hints)
         self._directory_adapter = BusinessDirectoryAdapter(town_hints=town_hints)
         self._website_adapter = WebsiteEnrichmentAdapter(town_hints=town_hints)
@@ -105,11 +122,6 @@ class SampleDiscoveryPipeline:
         towns: Sequence[TownSeed],
         query_seeds: Sequence[str],
     ) -> DiscoveryRunResult:
-        if not self._settings.use_sample_snapshots:
-            raise NotImplementedError(
-                "Only BUYER_DISCOVERY_USE_SAMPLE_SNAPSHOTS=true is implemented for the worker runtime."
-            )
-
         jobs = self.schedule_jobs(towns, query_seeds)
         raw_candidates: list[BuyerCandidate] = []
         processed_jobs = 0
@@ -130,15 +142,17 @@ class SampleDiscoveryPipeline:
         all_candidates = _unique_candidates([*unique_raw_candidates, *enriched_candidates])
         normalized_candidates = normalize_candidates(all_candidates)
         scored_candidates = tuple(score_candidates(normalized_candidates))
+        eligible_candidates = tuple(sanitize_scored_candidates(scored_candidates))
         crawl_run_ref = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         ingestion_request = build_ingestion_request(
-            scored_candidates,
+            eligible_candidates,
             crawl_run_ref=crawl_run_ref,
             state_by_town=self._town_state_by_name,
             discovery_source=self._settings.discovery_source,
         )
 
         return DiscoveryRunResult(
+            mode=self._catalog.mode_name,
             crawl_run_ref=crawl_run_ref,
             scheduled_jobs=len(jobs),
             processed_jobs=processed_jobs,
@@ -146,11 +160,13 @@ class SampleDiscoveryPipeline:
             raw_candidate_count=len(unique_raw_candidates),
             enriched_candidate_count=len(enriched_candidates),
             normalized_candidate_count=len(normalized_candidates),
+            sanitized_candidate_count=len(eligible_candidates),
             auto_approved_candidate_count=sum(
-                1 for candidate in scored_candidates if candidate.auto_approved
+                1 for candidate in eligible_candidates if candidate.auto_approved
             ),
             ingestion_request=ingestion_request,
             scored_candidates=scored_candidates,
+            eligible_candidates=eligible_candidates,
         )
 
     def _extract_job_candidates(
@@ -162,6 +178,7 @@ class SampleDiscoveryPipeline:
             candidates = self._google_adapter.extract_candidates(
                 snapshot.html,
                 search_page_url=snapshot.source_url,
+                fallback_town=job.town_name,
             )
         elif job.source_name == "business_directory":
             candidates = self._directory_adapter.extract_candidates(
@@ -179,6 +196,9 @@ class SampleDiscoveryPipeline:
         enriched_candidates: list[BuyerCandidate] = []
         for candidate in candidates:
             if not candidate.website:
+                continue
+            website_domain = normalize_domain(candidate.website)
+            if not website_domain or is_shared_host_domain(website_domain):
                 continue
             snapshot = self._catalog.website_snapshot(candidate.website)
             if snapshot is None:

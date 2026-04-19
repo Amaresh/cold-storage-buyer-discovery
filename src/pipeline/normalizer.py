@@ -14,6 +14,7 @@ from src.common.models import (
     NormalizedBuyerCandidate,
     slugify,
 )
+from src.common.sanitization import is_weak_business_name, significant_business_tokens
 from src.crawler.source_policy import get_source_policy
 
 _WHITESPACE_RE = re.compile(r"\s+")
@@ -21,12 +22,14 @@ _NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
 _EMAIL_RE = re.compile(r"^[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}$")
 _FIRST_PARTY_SOURCE_CLASSES = {"first_party_website"}
 _SHARED_HOST_DOMAINS = {
+    "dial4trade.com",
     "facebook.com",
     "instagram.com",
     "justdial.com",
     "linkedin.com",
     "tradeindia.com",
     "twitter.com",
+    "vyapartimes.com",
     "x.com",
     "indiamart.com",
 }
@@ -158,7 +161,7 @@ def normalize_domain(value: str) -> str:
     return hostname
 
 
-def _is_shared_host(domain: str) -> bool:
+def is_shared_host_domain(domain: str) -> bool:
     return any(domain == host or domain.endswith(f".{host}") for host in _SHARED_HOST_DOMAINS)
 
 
@@ -185,10 +188,16 @@ def _policy_metadata(source_key: str) -> tuple[str, int]:
 
 
 def _canonical_candidate_website(candidate: BuyerCandidate, source_confidence_class: str) -> str:
-    if source_confidence_class == "discovery_seed":
-        return ""
     if candidate.website:
-        return normalize_url(candidate.website)
+        normalized_website = normalize_url(candidate.website)
+        if source_confidence_class != "discovery_seed":
+            return normalized_website
+        domain = normalize_domain(normalized_website)
+        return "" if not domain or is_shared_host_domain(domain) else normalized_website
+    if source_confidence_class == "discovery_seed":
+        normalized_source_url = normalize_url(candidate.source_url)
+        domain = normalize_domain(normalized_source_url)
+        return "" if not domain or is_shared_host_domain(domain) else normalized_source_url
     if source_confidence_class in _FIRST_PARTY_SOURCE_CLASSES:
         return normalize_url(candidate.source_url)
     return ""
@@ -235,7 +244,7 @@ def _normalize_observation(candidate: BuyerCandidate) -> _NormalizedObservation 
     source_confidence_class, source_confidence_level = _policy_metadata(candidate.source_key)
     website = _canonical_candidate_website(candidate, source_confidence_class)
     domain = normalize_domain(website)
-    if domain and _is_shared_host(domain):
+    if domain and is_shared_host_domain(domain):
         domain = ""
     phones, emails, other_contact_hints = _partition_contact_hints(candidate.contact_hints)
     if not business_name or not business_name_key or not town or not town_key or not source_url:
@@ -300,6 +309,12 @@ def _can_merge(left: _NormalizedObservation, right: _NormalizedObservation) -> b
         and right.business_name_key
         and left.business_name_key != right.business_name_key
     ):
+        left_tokens = set(significant_business_tokens(left.business_name))
+        right_tokens = set(significant_business_tokens(right.business_name))
+        if left_tokens and right_tokens and left_tokens & right_tokens:
+            return True
+        if is_weak_business_name(left.business_name) or is_weak_business_name(right.business_name):
+            return True
         return False
     return True
 
@@ -308,6 +323,7 @@ def _preferred_observation(observations: Iterable[_NormalizedObservation]) -> _N
     return sorted(
         observations,
         key=lambda observation: (
+            is_weak_business_name(observation.business_name),
             -observation.source_confidence_level,
             -bool(observation.domain),
             -bool(observation.phones or observation.emails),

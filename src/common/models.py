@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from math import asin, cos, radians, sin, sqrt
 import re
 from typing import Literal
 
@@ -38,10 +39,32 @@ class TownSeed:
     name: str
     state: str = ""
     priority: int = 100
+    latitude: float | None = None
+    longitude: float | None = None
 
     @property
     def slug(self) -> str:
         return slugify(" ".join(part for part in (self.name, self.state) if part))
+
+    @property
+    def has_coordinates(self) -> bool:
+        return self.latitude is not None and self.longitude is not None
+
+    def distance_to(self, other: TownSeed) -> float | None:
+        if not self.has_coordinates or not other.has_coordinates:
+            return None
+
+        earth_radius_km = 6_371.0
+        latitude_delta = radians((other.latitude or 0.0) - (self.latitude or 0.0))
+        longitude_delta = radians((other.longitude or 0.0) - (self.longitude or 0.0))
+        latitude_one = radians(self.latitude or 0.0)
+        latitude_two = radians(other.latitude or 0.0)
+
+        haversine = (
+            sin(latitude_delta / 2) ** 2
+            + cos(latitude_one) * cos(latitude_two) * sin(longitude_delta / 2) ** 2
+        )
+        return 2 * earth_radius_km * asin(sqrt(haversine))
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)

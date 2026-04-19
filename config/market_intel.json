@@ -1,0 +1,232 @@
+{
+  "markets": [
+    {
+      "canonical_name": "Guntur",
+      "aliases": ["Guntur Mirchi Yard", "Guntur AMC"]
+    },
+    {
+      "canonical_name": "Warangal",
+      "aliases": ["Warangal Enumamula", "Enumamula Market Yard"]
+    },
+    {
+      "canonical_name": "Khammam",
+      "aliases": ["Khammam Agricultural Market Committee", "Khammam Market Yard"]
+    }
+  ],
+  "varieties": [
+    {
+      "canonical_name": "Teja",
+      "aliases": ["334 Teja", "Teja S17", "Teja Stemless"]
+    },
+    {
+      "canonical_name": "Byadgi",
+      "aliases": ["Byadagi Dry", "Byadgi Stemless", "Bedgi"]
+    }
+  ],
+  "warehouse_carry_profiles": [
+    {
+      "variety_name": "Teja",
+      "carry_price_per_quintal": 18500,
+      "available_bags": 420
+    },
+    {
+      "variety_name": "Byadgi",
+      "carry_price_per_quintal": 24000,
+      "available_bags": 180
+    }
+  ],
+  "sample_scenarios": {
+    "baseline": {
+      "official_price_snapshots": [
+        {
+          "source_key": "agmarknet_official_board",
+          "source_url": "fixture://official-board/agmarknet/guntur-teja-baseline",
+          "captured_at": "2024-07-08T09:00:00Z",
+          "market_name": "Guntur Mirchi Yard",
+          "variety_name": "334 Teja",
+          "min_price_per_quintal": 18500,
+          "modal_price_per_quintal": 18900,
+          "max_price_per_quintal": 19300
+        },
+        {
+          "source_key": "telangana_market_board",
+          "source_url": "fixture://official-board/telangana/warangal-teja-baseline",
+          "captured_at": "2024-07-08T09:10:00Z",
+          "market_name": "Warangal Enumamula",
+          "variety_name": "Teja Stemless",
+          "min_price_per_quintal": 18600,
+          "modal_price_per_quintal": 19050,
+          "max_price_per_quintal": 19450
+        },
+        {
+          "source_key": "agmarknet_official_board",
+          "source_url": "fixture://official-board/agmarknet/guntur-byadgi-baseline",
+          "captured_at": "2024-07-08T09:20:00Z",
+          "market_name": "Guntur AMC",
+          "variety_name": "Byadgi Stemless",
+          "min_price_per_quintal": 23500,
+          "modal_price_per_quintal": 23850,
+          "max_price_per_quintal": 24250
+        },
+        {
+          "source_key": "telangana_market_board",
+          "source_url": "fixture://official-board/telangana/khammam-byadgi-baseline",
+          "captured_at": "2024-07-08T09:30:00Z",
+          "market_name": "Khammam Agricultural Market Committee",
+          "variety_name": "Byadagi Dry",
+          "min_price_per_quintal": 23600,
+          "modal_price_per_quintal": 23950,
+          "max_price_per_quintal": 24350
+        }
+      ],
+      "chatter_items": [
+        {
+          "source_key": "trade_press_digest",
+          "source_url": "fixture://trade-press/baseline-teja",
+          "published_at": "2024-07-08T08:00:00Z",
+          "headline": "Spot buyers stay selective in Guntur",
+          "snippet": "Commission agents say colour and moisture checks remain strict before lifting Teja stock.",
+          "market_names": ["Guntur Mirchi Yard"],
+          "variety_names": ["334 Teja"]
+        },
+        {
+          "source_key": "market_bulletin_commentary",
+          "source_url": "fixture://bulletin/baseline-byadgi",
+          "published_at": "2024-07-08T07:30:00Z",
+          "headline": "Khammam arrivals stay balanced for Byadgi lots",
+          "snippet": "Floor chatter points to measured buying with no rush on premium bids.",
+          "market_names": ["Khammam Market Yard"],
+          "variety_names": ["Bedgi"]
+        }
+      ]
+    },
+    "high-rate": {
+      "official_price_snapshots": [
+        {
+          "source_key": "agmarknet_official_board",
+          "source_url": "fixture://official-board/agmarknet/guntur-teja-high",
+          "captured_at": "2024-07-10T09:00:00Z",
+          "market_name": "Guntur Mirchi Yard",
+          "variety_name": "334 Teja",
+          "min_price_per_quintal": 19800,
+          "modal_price_per_quintal": 20250,
+          "max_price_per_quintal": 20700
+        },
+        {
+          "source_key": "telangana_market_board",
+          "source_url": "fixture://official-board/telangana/warangal-teja-high",
+          "captured_at": "2024-07-10T09:10:00Z",
+          "market_name": "Warangal Enumamula",
+          "variety_name": "Teja S17",
+          "min_price_per_quintal": 20000,
+          "modal_price_per_quintal": 20450,
+          "max_price_per_quintal": 20850
+        },
+        {
+          "source_key": "agmarknet_official_board",
+          "source_url": "fixture://official-board/agmarknet/guntur-byadgi-high",
+          "captured_at": "2024-07-10T09:20:00Z",
+          "market_name": "Guntur AMC",
+          "variety_name": "Byadgi Stemless",
+          "min_price_per_quintal": 25200,
+          "modal_price_per_quintal": 25700,
+          "max_price_per_quintal": 26200
+        },
+        {
+          "source_key": "telangana_market_board",
+          "source_url": "fixture://official-board/telangana/khammam-byadgi-high",
+          "captured_at": "2024-07-10T09:30:00Z",
+          "market_name": "Khammam Agricultural Market Committee",
+          "variety_name": "Byadagi Dry",
+          "min_price_per_quintal": 25300,
+          "modal_price_per_quintal": 25850,
+          "max_price_per_quintal": 26350
+        }
+      ],
+      "chatter_items": [
+        {
+          "source_key": "trade_press_digest",
+          "source_url": "fixture://trade-press/high-teja",
+          "published_at": "2024-07-10T08:00:00Z",
+          "headline": "Tighter arrivals keep Teja spot bids firm in Guntur",
+          "snippet": "Trade desks mention active checking for brighter lots with fewer sellers pressing material.",
+          "market_names": ["Guntur Mirchi Yard", "Warangal Enumamula"],
+          "variety_names": ["334 Teja"]
+        },
+        {
+          "source_key": "market_bulletin_commentary",
+          "source_url": "fixture://bulletin/high-byadgi",
+          "published_at": "2024-07-10T07:30:00Z",
+          "headline": "Warangal and Khammam traders report firmer enquiry for Byadgi",
+          "snippet": "Handlers describe active lifting for colour-consistent bags, but this is commentary only.",
+          "market_names": ["Warangal Enumamula", "Khammam Market Yard"],
+          "variety_names": ["Bedgi"]
+        }
+      ]
+    },
+    "low-rate": {
+      "official_price_snapshots": [
+        {
+          "source_key": "agmarknet_official_board",
+          "source_url": "fixture://official-board/agmarknet/guntur-teja-low",
+          "captured_at": "2024-07-12T09:00:00Z",
+          "market_name": "Guntur Mirchi Yard",
+          "variety_name": "334 Teja",
+          "min_price_per_quintal": 16500,
+          "modal_price_per_quintal": 17000,
+          "max_price_per_quintal": 17400
+        },
+        {
+          "source_key": "telangana_market_board",
+          "source_url": "fixture://official-board/telangana/warangal-teja-low",
+          "captured_at": "2024-07-12T09:10:00Z",
+          "market_name": "Warangal Enumamula",
+          "variety_name": "Teja Stemless",
+          "min_price_per_quintal": 16600,
+          "modal_price_per_quintal": 17150,
+          "max_price_per_quintal": 17500
+        },
+        {
+          "source_key": "agmarknet_official_board",
+          "source_url": "fixture://official-board/agmarknet/guntur-byadgi-low",
+          "captured_at": "2024-07-12T09:20:00Z",
+          "market_name": "Guntur AMC",
+          "variety_name": "Byadgi Stemless",
+          "min_price_per_quintal": 22000,
+          "modal_price_per_quintal": 22400,
+          "max_price_per_quintal": 22800
+        },
+        {
+          "source_key": "telangana_market_board",
+          "source_url": "fixture://official-board/telangana/khammam-byadgi-low",
+          "captured_at": "2024-07-12T09:30:00Z",
+          "market_name": "Khammam Agricultural Market Committee",
+          "variety_name": "Byadagi Dry",
+          "min_price_per_quintal": 22100,
+          "modal_price_per_quintal": 22550,
+          "max_price_per_quintal": 22950
+        }
+      ],
+      "chatter_items": [
+        {
+          "source_key": "trade_press_digest",
+          "source_url": "fixture://trade-press/low-teja",
+          "published_at": "2024-07-12T08:00:00Z",
+          "headline": "Fresh arrivals weigh on Teja bargaining in Guntur",
+          "snippet": "Spot desks say buyers are slower and are stretching quality checks before confirming lots.",
+          "market_names": ["Guntur Mirchi Yard"],
+          "variety_names": ["Teja S17"]
+        },
+        {
+          "source_key": "market_bulletin_commentary",
+          "source_url": "fixture://bulletin/low-byadgi",
+          "published_at": "2024-07-12T07:30:00Z",
+          "headline": "Khammam floor talk points to softer Byadgi bids",
+          "snippet": "Handlers report buyers pushing harder on moisture and colour before lifting stock.",
+          "market_names": ["Khammam Market Yard"],
+          "variety_names": ["Byadagi Dry"]
+        }
+      ]
+    }
+  }
+}

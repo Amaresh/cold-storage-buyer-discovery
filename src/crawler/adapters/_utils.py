@@ -7,6 +7,10 @@ import re
 from urllib.parse import urljoin, urlparse
 
 _TAG_RE = re.compile(r"<[^>]+>")
+_SCRIPT_STYLE_RE = re.compile(
+    r"<(?:script|style|noscript)\b[^>]*>.*?</(?:script|style|noscript)>",
+    re.DOTALL | re.IGNORECASE,
+)
 _WHITESPACE_RE = re.compile(r"\s+")
 _PHONE_RE = re.compile(r"(?<![\w@])(?:\+?\d[\d\s().-]{7,}\d)(?![\w@])")
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}")
@@ -21,13 +25,15 @@ def collapse_whitespace(value: str) -> str:
 
 
 def strip_tags(fragment: str) -> str:
-    return collapse_whitespace(unescape(_TAG_RE.sub(" ", fragment)))
+    return collapse_whitespace(unescape(_TAG_RE.sub(" ", _SCRIPT_STYLE_RE.sub(" ", fragment))))
 
 
 def _looks_like_phone_hint(value: str) -> bool:
     compact = value.strip()
     digit_count = sum(character.isdigit() for character in compact)
-    if digit_count < 7:
+    if digit_count < 7 or digit_count > 15:
+        return False
+    if digit_count > 12 and not compact.startswith(("+", "00")):
         return False
     if _DATE_HINT_RE.fullmatch(compact):
         return False
@@ -77,10 +83,6 @@ def detect_town(*texts: str, town_hints: tuple[str, ...] = ()) -> str:
     state_pair = _STATE_PAIR_RE.search(combined)
     if state_pair:
         return collapse_whitespace(state_pair.group(1))
-
-    for part in reversed([collapse_whitespace(item) for item in combined.split(",")]):
-        if re.fullmatch(r"[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){0,2}", part):
-            return part
 
     match = _IN_OR_AT_TOWN_RE.search(combined)
     if match:

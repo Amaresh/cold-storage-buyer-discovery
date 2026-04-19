@@ -13,12 +13,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config.settings import settings
 from src.integration.backend_client import BackendIngestionClient
 from src.crawler.source_registry import SourceRegistry
+from src.exporter.market_intel_payload import (
+    build_market_chatter_ingestion_request,
+    build_market_price_snapshot_ingestion_request,
+)
+from src.runtime.market_intel_pipeline import MarketIntelPipeline
 from src.runtime.pipeline import SampleDiscoveryPipeline
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run the buyer discovery worker against curated sample snapshots."
+        description="Run the buyer discovery worker against sample snapshots or live web sources."
     )
     parser.add_argument(
         "--town",
@@ -47,11 +52,77 @@ def main() -> int:
         action="store_true",
         help="Run extraction and payload generation without posting to the backend.",
     )
+    parser.add_argument(
+        "--market-intel",
+        action="store_true",
+        help="Run the worker market-intelligence lane instead of buyer discovery.",
+    )
+    parser.add_argument(
+        "--market-scenario",
+        help="Approved named market-intel scenario fixture to run.",
+    )
     args = parser.parse_args()
 
     registry = SourceRegistry(settings.sources)
     if args.list_sources:
         print(json.dumps([source.to_dict() for source in registry.sources], indent=2))
+        return 0
+
+    if args.market_intel:
+        try:
+            market_result = MarketIntelPipeline(settings).run(scenario=args.market_scenario)
+        except ValueError as exc:
+            print(
+                json.dumps(
+                    {
+                        "error": str(exc),
+                        "ingestRequested": False,
+                    },
+                    indent=2,
+                ),
+                file=sys.stderr,
+            )
+            return 1
+
+        summary = market_result.to_dict()
+        summary["ingestRequested"] = False
+        summary["marketIntelligenceRequest"] = market_result.market_intelligence_request
+        if args.dry_run or market_result.scenario != "baseline":
+            print(json.dumps(summary, indent=2))
+            return 0
+        if not settings.internal_api_key:
+            print(
+                json.dumps(
+                    {
+                        "error": (
+                            "BUYER_DISCOVERY_INTERNAL_API_KEY must be configured before "
+                            "market-intelligence ingestion."
+                        ),
+                        "ingestRequested": False,
+                    },
+                    indent=2,
+                ),
+                file=sys.stderr,
+            )
+            return 1
+
+        client = BackendIngestionClient(
+            base_url=settings.backend_base_url,
+            tenant_id=settings.tenant_id,
+            warehouse_id=settings.warehouse_id,
+            api_header=settings.internal_api_header,
+            api_key=settings.internal_api_key,
+        )
+        summary["ingestRequested"] = True
+        summary["ingestion"] = {
+            "priceSnapshots": client.ingest_market_price_snapshots(
+                build_market_price_snapshot_ingestion_request(market_result.signals)
+            ),
+            "chatter": client.ingest_market_chatter(
+                build_market_chatter_ingestion_request(market_result.signals)
+            ),
+        }
+        print(json.dumps(summary, indent=2))
         return 0
 
     towns = settings.resolve_towns(args.towns)

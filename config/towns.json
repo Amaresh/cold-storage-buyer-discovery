@@ -3,17 +3,128 @@
     {
       "name": "Guntur",
       "state": "Andhra Pradesh",
-      "priority": 1
+      "priority": 1,
+      "latitude": 16.3067,
+      "longitude": 80.4365
+    },
+    {
+      "name": "Vijayawada",
+      "state": "Andhra Pradesh",
+      "priority": 2,
+      "latitude": 16.5062,
+      "longitude": 80.648
+    },
+    {
+      "name": "Tenali",
+      "state": "Andhra Pradesh",
+      "priority": 3,
+      "latitude": 16.243,
+      "longitude": 80.64
+    },
+    {
+      "name": "Eluru",
+      "state": "Andhra Pradesh",
+      "priority": 4,
+      "latitude": 16.7107,
+      "longitude": 81.0952
+    },
+    {
+      "name": "Bhimavaram",
+      "state": "Andhra Pradesh",
+      "priority": 5,
+      "latitude": 16.5449,
+      "longitude": 81.5212
+    },
+    {
+      "name": "Ongole",
+      "state": "Andhra Pradesh",
+      "priority": 6,
+      "latitude": 15.5057,
+      "longitude": 80.0499
+    },
+    {
+      "name": "Chirala",
+      "state": "Andhra Pradesh",
+      "priority": 7,
+      "latitude": 15.8235,
+      "longitude": 80.3522
+    },
+    {
+      "name": "Rajamahendravaram",
+      "state": "Andhra Pradesh",
+      "priority": 8,
+      "latitude": 17.0005,
+      "longitude": 81.804
+    },
+    {
+      "name": "Kakinada",
+      "state": "Andhra Pradesh",
+      "priority": 9,
+      "latitude": 16.9891,
+      "longitude": 82.2475
     },
     {
       "name": "Khammam",
       "state": "Telangana",
-      "priority": 2
+      "priority": 10,
+      "latitude": 17.2473,
+      "longitude": 80.1514
+    },
+    {
+      "name": "Suryapet",
+      "state": "Telangana",
+      "priority": 11,
+      "latitude": 17.1405,
+      "longitude": 79.6207
+    },
+    {
+      "name": "Miryalaguda",
+      "state": "Telangana",
+      "priority": 12,
+      "latitude": 16.8722,
+      "longitude": 79.5625
+    },
+    {
+      "name": "Nalgonda",
+      "state": "Telangana",
+      "priority": 13,
+      "latitude": 17.0575,
+      "longitude": 79.2672
     },
     {
       "name": "Warangal",
       "state": "Telangana",
-      "priority": 3
+      "priority": 14,
+      "latitude": 17.9689,
+      "longitude": 79.5941
+    },
+    {
+      "name": "Hyderabad",
+      "state": "Telangana",
+      "priority": 15,
+      "latitude": 17.385,
+      "longitude": 78.4867
+    },
+    {
+      "name": "Karimnagar",
+      "state": "Telangana",
+      "priority": 16,
+      "latitude": 18.4386,
+      "longitude": 79.1288
+    },
+    {
+      "name": "Kurnool",
+      "state": "Andhra Pradesh",
+      "priority": 17,
+      "latitude": 15.8281,
+      "longitude": 78.0373
+    },
+    {
+      "name": "Visakhapatnam",
+      "state": "Andhra Pradesh",
+      "priority": 18,
+      "latitude": 17.6868,
+      "longitude": 83.2185
     }
   ]
 }
