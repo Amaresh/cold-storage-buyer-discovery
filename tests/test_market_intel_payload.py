@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.exporter.market_intel_payload import (
+    build_market_carry_benchmark_ingestion_request,
     build_market_chatter_ingestion_request,
     build_market_price_snapshot_ingestion_request,
     build_market_intelligence_request,
@@ -195,6 +196,22 @@ def test_export_market_signal_payload_keeps_official_and_chatter_inputs_separate
                 "chatterType": "TRADE_COVERAGE",
                 "publishedAt": "2024-07-10T08:00:00Z",
                 "capturedAt": "2024-07-10T08:00:00Z",
+            }
+        ]
+    }
+    assert build_market_carry_benchmark_ingestion_request(
+        [signal],
+        captured_at="2024-07-10T09:30:00Z",
+    ) == {
+        "benchmarks": [
+            {
+                "chilliVariety": "Teja",
+                "carryPricePerKg": 185.0,
+                "sourceType": "WORKER_PROFILE",
+                "weightSource": "PROFILE_FALLBACK",
+                "bagCount": 420,
+                "weightKg": None,
+                "capturedAt": "2024-07-10T09:30:00Z",
             }
         ]
     }

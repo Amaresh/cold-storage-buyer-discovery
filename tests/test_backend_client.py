@@ -201,3 +201,45 @@ def test_backend_client_posts_market_chatter_with_internal_headers() -> None:
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_backend_client_posts_market_carry_benchmarks_with_internal_headers() -> None:
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _RequestCaptureHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        client = BackendIngestionClient(
+            base_url=f"http://127.0.0.1:{server.server_address[1]}",
+            tenant_id="demo-tenant",
+            warehouse_id="guntur-hub",
+            api_header="X-API-Key",
+            api_key="secret-token",
+        )
+
+        response = client.ingest_market_carry_benchmarks(
+            {
+                "benchmarks": [
+                    {
+                        "chilliVariety": "Teja",
+                        "carryPricePerKg": 185.0,
+                        "sourceType": "WORKER_PROFILE",
+                        "weightSource": "PROFILE_FALLBACK",
+                        "bagCount": 420,
+                        "weightKg": None,
+                        "capturedAt": "2024-07-08T09:30:00Z",
+                    }
+                ]
+            }
+        )
+
+        assert response["processedCount"] == 1
+        captured = server.captured_request  # type: ignore[attr-defined]
+        headers = {key.casefold(): value for key, value in captured["headers"].items()}
+        assert captured["path"] == "/api/v1/internal/trading/market-intelligence/benchmarks"
+        assert headers["x-api-key"] == "secret-token"
+        assert headers["x-tenant-id"] == "demo-tenant"
+        assert headers["x-warehouse-id"] == "guntur-hub"
+        assert captured["body"]["benchmarks"][0]["carryPricePerKg"] == 185.0
+    finally:
+        server.shutdown()
+        server.server_close()

@@ -210,6 +210,27 @@ def build_market_chatter_ingestion_request(
     }
 
 
+def build_market_carry_benchmark_ingestion_request(
+    signals: Iterable[VarietyMarketSignal],
+    *,
+    captured_at: str,
+) -> dict[str, object]:
+    return {
+        "benchmarks": [
+            {
+                "chilliVariety": signal.variety_name,
+                "carryPricePerKg": _official_price_per_kg(signal.carry_price_per_quintal),
+                "sourceType": "WORKER_PROFILE",
+                "weightSource": "PROFILE_FALLBACK",
+                "bagCount": signal.available_bags,
+                "weightKg": None,
+                "capturedAt": captured_at,
+            }
+            for signal in signals
+        ]
+    }
+
+
 def build_market_intelligence_request(
     signals: Iterable[VarietyMarketSignal],
     *,

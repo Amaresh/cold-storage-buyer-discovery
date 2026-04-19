@@ -23,6 +23,7 @@ class BackendIngestionClient:
         self._buyer_lead_endpoint = f"{base}/api/v1/internal/trading/buyer-leads/ingestion"
         self._market_snapshot_endpoint = f"{base}/api/v1/internal/trading/market-intelligence/price-snapshots"
         self._market_chatter_endpoint = f"{base}/api/v1/internal/trading/market-intelligence/chatter"
+        self._market_benchmark_endpoint = f"{base}/api/v1/internal/trading/market-intelligence/benchmarks"
         self._tenant_id = tenant_id
         self._warehouse_id = warehouse_id
         self._api_header = api_header
@@ -50,6 +51,14 @@ class BackendIngestionClient:
             self._market_chatter_endpoint,
             payload,
             item_key="items",
+            empty_response={"processedCount": 0},
+        )
+
+    def ingest_market_carry_benchmarks(self, payload: dict[str, object]) -> dict[str, object]:
+        return self._post(
+            self._market_benchmark_endpoint,
+            payload,
+            item_key="benchmarks",
             empty_response={"processedCount": 0},
         )
 

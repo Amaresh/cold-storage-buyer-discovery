@@ -14,6 +14,7 @@ from config.settings import settings
 from src.integration.backend_client import BackendIngestionClient
 from src.crawler.source_registry import SourceRegistry
 from src.exporter.market_intel_payload import (
+    build_market_carry_benchmark_ingestion_request,
     build_market_chatter_ingestion_request,
     build_market_price_snapshot_ingestion_request,
 )
@@ -120,6 +121,12 @@ def main() -> int:
             ),
             "chatter": client.ingest_market_chatter(
                 build_market_chatter_ingestion_request(market_result.signals)
+            ),
+            "benchmarks": client.ingest_market_carry_benchmarks(
+                build_market_carry_benchmark_ingestion_request(
+                    market_result.signals,
+                    captured_at=market_result.captured_at,
+                )
             ),
         }
         print(json.dumps(summary, indent=2))
