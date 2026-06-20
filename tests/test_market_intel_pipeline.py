@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from config.settings import Settings
 from src.market_intel.normalizer import (
     normalize_market_chatter_items,
@@ -11,8 +13,11 @@ from src.runtime.market_intel_pipeline import MarketIntelPipeline
 def test_market_intel_pipeline_builds_conservative_baseline_watch_outputs() -> None:
     settings = Settings()
     pipeline = MarketIntelPipeline(settings)
+    before = datetime.now(timezone.utc) - timedelta(seconds=1)
 
     result = pipeline.run()
+    after = datetime.now(timezone.utc) + timedelta(seconds=1)
+    captured_at = datetime.fromisoformat(result.captured_at.replace("Z", "+00:00"))
 
     assert result.mode == "approved_market_fixtures"
     assert result.scenario == "baseline"
@@ -29,6 +34,18 @@ def test_market_intel_pipeline_builds_conservative_baseline_watch_outputs() -> N
     assert all(
         signal["directionBasis"] == "OFFICIAL_BOARD_ONLY"
         for signal in result.market_intelligence_request["signals"]
+    )
+    assert before <= captured_at <= after
+    assert result.market_intelligence_request["capturedAt"] == result.captured_at
+    assert all(
+        snapshot.captured_at == result.captured_at
+        for signal in result.signals
+        for snapshot in signal.official_price_inputs
+    )
+    assert all(
+        item.published_at == result.captured_at
+        for signal in result.signals
+        for item in signal.chatter_inputs
     )
 
 

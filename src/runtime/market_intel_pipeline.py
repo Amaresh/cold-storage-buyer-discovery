@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import datetime, timezone
 from statistics import median
 
 from config.settings import Settings
@@ -76,21 +77,24 @@ class MarketIntelPipeline:
     def run(self, *, scenario: str | None = None) -> MarketIntelRunResult:
         selected_scenario = (scenario or self._settings.market_intel_scenario).strip()
         market_scenario = self._catalog.scenario(selected_scenario)
-        official_snapshots = normalize_official_price_snapshots(
-            market_scenario.official_price_snapshots,
-            market_alias_lookup=self._market_alias_lookup,
-            variety_alias_lookup=self._variety_alias_lookup,
+        run_captured_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        official_snapshots = self._retime_official_snapshots(
+            normalize_official_price_snapshots(
+                market_scenario.official_price_snapshots,
+                market_alias_lookup=self._market_alias_lookup,
+                variety_alias_lookup=self._variety_alias_lookup,
+            ),
+            captured_at=run_captured_at,
         )
-        chatter_items = normalize_market_chatter_items(
-            market_scenario.chatter_items,
-            market_alias_lookup=self._market_alias_lookup,
-            variety_alias_lookup=self._variety_alias_lookup,
+        chatter_items = self._retime_chatter_items(
+            normalize_market_chatter_items(
+                market_scenario.chatter_items,
+                market_alias_lookup=self._market_alias_lookup,
+                variety_alias_lookup=self._variety_alias_lookup,
+            ),
+            published_at=run_captured_at,
         )
-        captured_at = max(
-            [snapshot.captured_at for snapshot in official_snapshots]
-            + [item.published_at for item in chatter_items],
-            default="",
-        )
+        captured_at = run_captured_at
         signals = tuple(
             self._build_signal(profile, official_snapshots, chatter_items)
             for profile in self._carry_profiles
@@ -111,6 +115,28 @@ class MarketIntelPipeline:
             signal_count=len(signals),
             market_intelligence_request=request,
             signals=signals,
+        )
+
+    def _retime_official_snapshots(
+        self,
+        official_snapshots: Sequence[NormalizedOfficialMarketPriceSnapshot],
+        *,
+        captured_at: str,
+    ) -> tuple[NormalizedOfficialMarketPriceSnapshot, ...]:
+        return tuple(
+            replace(snapshot, captured_at=captured_at)
+            for snapshot in official_snapshots
+        )
+
+    def _retime_chatter_items(
+        self,
+        chatter_items: Sequence[NormalizedMarketChatterItem],
+        *,
+        published_at: str,
+    ) -> tuple[NormalizedMarketChatterItem, ...]:
+        return tuple(
+            replace(item, published_at=published_at)
+            for item in chatter_items
         )
 
     def _build_signal(
