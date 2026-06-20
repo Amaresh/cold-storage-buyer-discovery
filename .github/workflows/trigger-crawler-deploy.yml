@@ -21,6 +21,7 @@ jobs:
             echo "OPS_REPO_DISPATCH_TOKEN / REPO_SYNC_GITHUB_TOKEN is not configured; skipping dispatch."
             exit 0
           fi
+          export GH_TOKEN
 
           gh api repos/Amaresh/cold-storage-ops/dispatches \
             --method POST \
