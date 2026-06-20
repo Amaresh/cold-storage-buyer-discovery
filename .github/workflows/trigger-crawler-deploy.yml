@@ -11,12 +11,14 @@ jobs:
     steps:
       - name: Dispatch ops deploy
         env:
-          GH_TOKEN: ${{ secrets.OPS_REPO_DISPATCH_TOKEN }}
+          OPS_REPO_DISPATCH_TOKEN: ${{ secrets.OPS_REPO_DISPATCH_TOKEN }}
+          REPO_SYNC_GITHUB_TOKEN: ${{ secrets.REPO_SYNC_GITHUB_TOKEN }}
           PROJECT: cold-storage-buyer-discovery
         run: |
           set -euo pipefail
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "OPS_REPO_DISPATCH_TOKEN is not configured; skipping dispatch."
+          GH_TOKEN="${OPS_REPO_DISPATCH_TOKEN:-${REPO_SYNC_GITHUB_TOKEN:-}}"
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "OPS_REPO_DISPATCH_TOKEN / REPO_SYNC_GITHUB_TOKEN is not configured; skipping dispatch."
             exit 0
           fi
 
